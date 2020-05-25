@@ -2,7 +2,7 @@
 
 **<center><h1>Screeps Spanish Tutorial</h1></center>**
 
-# Interfaz de usuario del juego y secuencias de comandos básicas
+# 1. Interfaz de usuario del juego y secuencias de comandos básicas
 
 Bienvenido a Screeps!
 
@@ -230,3 +230,107 @@ module.exports.loop = function () {
 ¡Es mucho mejor ahora!
 
 Al agregar nuevas funciones y módulos a tus creeps de esta manera, puede controlar y administrar el trabajo de muchos creeps. En la siguiente sección del Tutorial, desarrollaremos un nuevo rol de creep.
+
+# 2. Actualización de controlador
+
+En esta sección del Tutorial, hablaremos sobre un objeto clave estratégico en tu habitación: **Romm Controller**. Al controlar esta invencible estructura, puedes construir instalaciones en la habitación. Cuanto más alto sea el nivel del controlador, más estructuras estarán disponibles para construir.
+
+Necesitarás un nuevo creep trabajador para actualizar a tu controlador. Llamémoslo "Upgrader1". En las siguientes secciones discutiremos cómo crear creeps automáticamente, pero por ahora enviemos un comando manualmente a la consola.
+
+Genera un creep con el cuerpo ```[WORK,CARRY,MOVE]``` y el nombre ```Upgrader1.```
+
+- Documentación:
+  - [Control](https://docs.screeps.com/control.html)
+  - [Game.spawns](https://docs.screeps.com/api/#Game.spawns)
+  - [StructureSpawn.spawnCreep](https://docs.screeps.com/api/#StructureSpawn.spawnCreep)
+
+Código
+
+```javascript
+Game.spawns['Spawn1'].spawnCreep( [WORK, CARRY, MOVE], 'Upgrader1' );
+```
+
+El creep "Upgrader1" realizará la misma tarea que el creep cosechador de energía, pero no queremos que lo haga. Necesitamos diferenciar los roles de los creeps.
+
+Para hacer eso, necesitamos utilizar la propiedad de ```memory``` de cada creep que permite escribir información personalizada en la "memoria" del creep. Hagamos esto para asignar diferentes roles a nuestros creeps.
+
+Se puede acceder a toda su memoria almacenada a través del objeto de memoria global. Puedes usarlo como quieras.
+
+Escriba la propiedad ```role='harvester'``` en la memoria del creep cosechador de energía, y escribe la propiedad ```role='upgrader'```- en el creep actualizador con la ayuda de la consola.
+
+- Documentación:
+  - [Memory object](https://docs.screeps.com/global-objects#Memory-object)
+  - [Creep.memory](https://docs.screeps.com/api/#Creep.memory)
+
+Código
+
+```javascript
+Game.creeps['Harvester1'].memory.role = 'harvester';
+Game.creeps['Upgrader1'].memory.role = 'upgrader';
+```
+
+Puedes verificar la memoria de tus creeps en el panel de información de creeps a la izquierda o en la pestaña "Memory".
+
+Ahora vamos a definir el comportamiento del nuevo creep. Ambos creeps deberían recolectar energía, pero el creep con el rol de recolector ```(harvester)``` debería llevarlo al spawn, mientras que el creep con el rol de actualizador ```(upgrader)``` debería ir al Controlador y aplicarle la función ```upgradeController``` (puede obtener el objeto Controlador con la ayuda de la propiedad ```Creep.room.controller```).
+
+Para hacer esto, crearemos un nuevo módulo llamado ```role.upgrader.```
+
+Crea un nuevo módulo y nombralo ```role.upgrader``` y agrega la lógica de comportamiento de tu nuevo creep.
+
+- Documentación:
+  - [RoomObject.room](https://docs.screeps.com/api/#RoomObject.room)
+  - [Room.Controller](https://docs.screeps.com/api/#Room.controller)
+  - [Creep.upgradeController](https://docs.screeps.com/api/#Creep.upgradeController)
+
+
+Código (role.upgrader)
+
+```javascript
+var roleUpgrader = {
+
+    /** @param {Creep} creep **/
+    run: function(creep) {
+	    if(creep.store[RESOURCE_ENERGY] == 0) {
+            var sources = creep.room.find(FIND_SOURCES);
+            if(creep.harvest(sources[0]) == ERR_NOT_IN_RANGE) {
+                creep.moveTo(sources[0]);
+            }
+        }
+        else {
+            if(creep.upgradeController(creep.room.controller) == ERR_NOT_IN_RANGE) {
+                creep.moveTo(creep.room.controller);
+            }
+        }
+	}
+};
+
+module.exports = roleUpgrader;
+```
+
+Ahora en nuestro módulo principal, todos los creeps tienen el mismo rol. Necesitamos dividir su comportamiento dependiendo de la propiedad ```Creep.memory.role``` previamente definida conectando el nuevo módulo.
+
+Aplicaremos la lógica del módulo ```role.upgrader``` al creep con el actualizador de roles y verifica cómo funciona.
+
+Código (main)
+
+```javascript
+var roleHarvester = require('role.harvester');
+var roleUpgrader = require('role.upgrader');
+
+module.exports.loop = function () {
+
+    for(var name in Game.creeps) {
+        var creep = Game.creeps[name];
+        if(creep.memory.role == 'harvester') {
+            roleHarvester.run(creep);
+        }
+        if(creep.memory.role == 'upgrader') {
+            roleUpgrader.run(creep);
+        }
+    }
+}
+```
+
+¡Perfecto, has mejorado el nivel de tu controlador!
+
+**Importante:** si no actualizas tu controlador dentro de los 20,000 ticks de juego, pierdes un nivel. Al alcanzar el nivel 0, perderás el control sobre la sala y otro jugador podrá capturarlo libremente. Asegúrese de que al menos uno de tus creeps realice regularmente la función ```upgradeController.```
