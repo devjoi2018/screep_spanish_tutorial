@@ -17,7 +17,7 @@ Vamos a empezar. Este es un campo de juego llamado "sala". En el juego real, las
 El objeto en el centro de la pantalla es tu primer Spawn, el centro de tu colonia.
 
 - Documentación:
-  - [Game world]([https://link](https://docs.screeps.com/introduction.html#Game-world))
+  - [Game world](https://docs.screeps.com/introduction.html#Game-world)
 
 Juegas escribiendo código real en la **consola** que esta en la parte inferior de la pantalla.
 
@@ -38,10 +38,10 @@ Puedes localizar a tu screep por su nombre de la siguiente manera: ```Game.spawn
 Crea un creep trabajador con estos valores en el array de su cuerpo ```[WORK,CARRY,MOVE]``` y nombralo ```Harvester1```  (¡El nombre es importante para el tutorial, pero puedes darle el nombre que quieras en un juego real!). Puedes escribir el código en la consola por tu propia cuenta o copiar y pegar el código a continuación en la consola.
 
 - Documentación:
-  - [Your Colony]([https://link](https://docs.screeps.com/introduction.html#Your-colony))
-  - [Creeps]([https://link](https://docs.screeps.com/creeps.html))
-  - [Game Object]([https://link](https://docs.screeps.com/global-objects.html#Game-object))
-  - [StructureSpawn.spawnCreep]([https://link](https://docs.screeps.com/api/#StructureSpawn.spawnCreep))
+  - [Your Colony](https://docs.screeps.com/introduction.html#Your-colony)
+  - [Creeps](https://docs.screeps.com/creeps.html)
+  - [Game Object](https://docs.screeps.com/global-objects.html#Game-object)
+  - [StructureSpawn.spawnCreep](https://docs.screeps.com/api/#StructureSpawn.spawnCreep)
 
 Código
 
