@@ -8,9 +8,9 @@ Bienvenido a Screeps!
 
 Este tutorial te ayudará a aprender conceptos básicos del juego paso a paso. Puedes tomarlo más tarde, pero te recomendamos encarecidamente que lo hagas ahora, antes de comenzar un juego real.
 
-Screeps es un juego para programadores. Si no sabe cómo codificar en JavaScript, consulte este [curso interactivo gratuito.]([https://link](https://www.codecademy.com/learn/introduction-to-javascript))
+Screeps es un juego para programadores. Si no sabe cómo codificar en JavaScript, consulte este [curso interactivo gratuito.](https://www.codecademy.com/learn/introduction-to-javascript)
 
-Recuerde que si cierras accidentalmente la ventana de sugerencias en el tutorial, siempre puede abrirla nuevamente con este botón <i class="fas fa-question-circle"></i>. 
+Recuerde que si cierras accidentalmente la ventana de sugerencias en el tutorial, siempre puede abrirla nuevamente con este botón que tiene un signo de interrogación <i class="fas fa-question-circle"></i>. 
 
 Vamos a empezar. Este es un campo de juego llamado "sala". En el juego real, las habitaciones están conectadas entre sí con salidas, pero en el modo de simulación solo hay una habitación disponible para ti.
 
@@ -51,7 +51,7 @@ Game.spawns['Spawn1'].spawnCreep( [WORK, CARRY, MOVE], 'Harvester1' );
 
 ¡Excelente! Ahora tienes un creep con el nombre "Harvester1" que puedes controlar.
 
-Puedes ver todas las características de tu creep (u otros objetos) utilizando la acción "Ver" <i class="fas fa-eye"></i>.
+Puedes ver todas las características de tu creep (u otros objetos) utilizando la acción "Ver" (botón en forma de ojo) <i class="fas fa-eye"></i>.
 
 Para ocultar el panel del editor presione **Alt+Enter** y selecciona a tu creep con la ayuda del botón o la acción "Ver".
 
@@ -65,7 +65,7 @@ Haga clic en la pestaña "Script".
 
 En la pestaña Scripts puedes escribir scripts que se ejecutarán de forma permanente, cada tick del juego en un bucle. Permite escribir programas que funcionan constantemente para controlar el comportamiento de tus creep que funcionarán incluso mientras estás desconectado (solo en el juego real, no en el modo Sala de simulación).
 
-Para enviar un script al juego para que pueda ejecutarse, use este botón <i class="fas fa-check"></i> o **Ctrl+Enter**.
+Para enviar un script al juego para que pueda ejecutarse, usa el botón con simbolo de check <i class="fas fa-check"></i> o **Ctrl+Enter**.
 
 El código para cada sección del Tutorial se crea en su propia rama. Puedes ver el código de estas ramas para usarlo en un futuro en sus scripts.
 
@@ -728,7 +728,7 @@ Ahora limpiemos la habitación de los invitados no deseados.
 
 Las torres son la forma más fácil de defender activamente una habitación. Usan energía y pueden apuntar a cualquier creep en una habitación para atacarlo o curarlo. El efecto depende de la distancia entre la torre y el objetivo.
 
-Para empezar, vamos a sentar las bases de nuestra nueva torre. Puedes configurar cualquier lugar que desees dentro de las paredes y colocar el sitio de construcción con la ayuda del botón "Construir" en el panel superior <i class="fas fa-cube"></i>.
+Para empezar, vamos a sentar las bases de nuestra nueva torre. Puedes configurar cualquier lugar que desees dentro de las paredes y colocar el sitio de construcción con la ayuda del botón "Construir" en el panel superior (botón con simbolo en forma de caja) <i class="fas fa-cube"></i>.
 
 Coloca el sitio de construcción para la torre (manualmente o usando el código a continuación).
 
