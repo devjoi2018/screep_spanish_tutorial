@@ -334,3 +334,204 @@ module.exports.loop = function () {
 ¡Perfecto, has mejorado el nivel de tu controlador!
 
 **Importante:** si no actualizas tu controlador dentro de los 20,000 ticks de juego, pierdes un nivel. Al alcanzar el nivel 0, perderás el control sobre la sala y otro jugador podrá capturarlo libremente. Asegúrese de que al menos uno de tus creeps realice regularmente la función ```upgradeController.```
+
+# 3. Contruyendo estructuras
+
+La actualización del controlador da acceso a algunas estructuras nuevas: muros, murallas y extensiones. Discutiremos muros y murallas en la próxima sección del Tutorial, por ahora hablemos de extensiones.
+
+Se requieren extensiones para construir creeps más grandes. Un creep con solo una parte del cuerpo de un solo tipo funciona mal. Darle varias partes de ```WORKs``` (trabajos) lo hará trabajar proporcionalmente más rápido.
+
+Sin embargo, tal desplazamiento será costoso y un solo spawn solo puede contener 300 unidades de energía. Para construir creeps que cuestan más de 300 unidades de energía, necesitas extensiones de spawn.
+
+El segundo nivel de Controlador tiene **5 extensiones** disponibles para que construyas. Este número aumenta con cada nuevo nivel.
+
+Puedes colocar extensiones en cualquier lugar de tu habitación, y un creep puede usarlas independientemente de la distancia. En este tutorial ya hemos colocado los sitios de construcción correspondientes para tu conveniencia.
+
+Vamos a crear un nuevo creep cuyo propósito es construir estructuras. Este proceso será similar a las secciones de Tutoriales anteriores. Pero esta vez establezcamos ```memoria``` para el nuevo creep directamente en el método ```Spawn.spawnCreep``` pasándolo en el tercer argumento.
+
+Crea un creep con el cuerpo ```[WORK,CARRY,MOVE]```, y el nombre ```Builder1``` y ```{role: 'builder'}``` como su memoria.
+
+- Documentación:
+  - [StructureSpawn.spawnCreep](https://docs.screeps.com/api/#StructureSpawn.spawnCreep)
+
+Código
+
+```javascript
+Game.spawns['Spawn1'].spawnCreep( [WORK, CARRY, MOVE], 'Builder1',
+    { memory: { role: 'builder' } } );
+```
+
+Nuestro nuevo creep no se moverá hasta que definamos el comportamiento en el role ```builder.```
+
+Como antes, vamos a pasar este rol a un módulo separado con el nombre ```role.builder.``` La construcción es llevada a cabo aplicando el método ```Creep.build``` a los sitios de construcción que se pueden buscar por ```Room.find (FIND_CONSTRUCTION_SITES).``` La estructura requiere energía que el creep puede cosechar por sí solo.
+
+Para evitar que el creep corra de un lado a otro con demasiada frecuencia, sin que se agote la carga, complicaremos nuestra lógica creando una nueva variable booleana ```creep.memory.building``` que le dirá al creep cuándo cambiar de tarea. También agregaremos la nueva opción ```creep.say``` y ```visualizePathStyle``` al método ```moveTo``` para visualizar las intenciones del creep.
+
+Crearemos el módulo ```role.builder``` con la lógica de comportamiento para el nuevo creep.
+
+- Documentation:
+  - [RoomObject.room](https://docs.screeps.com/api/#RoomObject.room)
+  - [Room.find](https://docs.screeps.com/api/#Room.find)
+  - [Creep.build](https://docs.screeps.com/api/#Creep.build)
+  - [Creep.say](https://docs.screeps.com/api/#Creep.say)
+
+Código (role.builder)
+
+```javascript
+var roleBuilder = {
+
+    /** @param {Creep} creep **/
+    run: function(creep) {
+
+	    if(creep.memory.building && creep.store[RESOURCE_ENERGY] == 0) {
+            creep.memory.building = false;
+            creep.say('🔄 harvest');
+	    }
+	    if(!creep.memory.building && creep.store.getFreeCapacity() == 0) {
+	        creep.memory.building = true;
+	        creep.say('🚧 build');
+	    }
+
+	    if(creep.memory.building) {
+	        var targets = creep.room.find(FIND_CONSTRUCTION_SITES);
+            if(targets.length) {
+                if(creep.build(targets[0]) == ERR_NOT_IN_RANGE) {
+                    creep.moveTo(targets[0], {visualizePathStyle: {stroke: '#ffffff'}});
+                }
+            }
+	    }
+	    else {
+	        var sources = creep.room.find(FIND_SOURCES);
+            if(creep.harvest(sources[0]) == ERR_NOT_IN_RANGE) {
+                creep.moveTo(sources[0], {visualizePathStyle: {stroke: '#ffaa00'}});
+            }
+	    }
+	}
+};
+
+module.exports = roleBuilder;
+```
+
+Crearemos una llamada del nuevo rol en el módulo principal y esperemos el resultado.
+
+Para usar el módulo ```role.builder``` en el nuevo creep, construye las 5 extensiones.
+
+Código (main)
+
+```javascript
+var roleHarvester = require('role.harvester');
+var roleBuilder = require('role.builder');
+
+module.exports.loop = function () {
+
+    for(var name in Game.creeps) {
+        var creep = Game.creeps[name];
+        if(creep.memory.role == 'harvester') {
+            roleHarvester.run(creep);
+        }
+        if(creep.memory.role == 'builder') {
+            roleBuilder.run(creep);
+        }
+    }
+}
+```
+
+Tus extensiones deberian de haber sido construidas. Ahora aprendamos a trabajar con ellas.
+
+Mantener las extensiones requiere que enseñes a tus creeps a llevar energía no solo a un spawn sino también a las extensiones. Para hacer esto, puedes usar el objeto ```Game.structures``` o buscar dentro de la habitación con la ayuda de ```Room.find (FIND_STRUCTURES).``` En ambos casos, deberás filtrar la lista de elementos en la condición ```structure.structureType == STRUCTURE_EXTENSION``` (o, alternativamente, ```structure instanceof StructureExtension```) y también verificarlos para la carga de energía, como antes.
+
+Mejoremos la lógica en el módulo ```role.harvester.```
+
+- Documentación:
+  - [Game.structures](https://docs.screeps.com/api/#Game.structures)
+  - [Room.find](https://docs.screeps.com/api/#Room.find)
+  - [StructureExtension](https://docs.screeps.com/api/#StructureExtension)
+
+Código (role.harvester)
+
+```javascript
+var roleHarvester = {
+
+    /** @param {Creep} creep **/
+    run: function(creep) {
+	    if(creep.store.getFreeCapacity() > 0) {
+            var sources = creep.room.find(FIND_SOURCES);
+            if(creep.harvest(sources[0]) == ERR_NOT_IN_RANGE) {
+                creep.moveTo(sources[0], {visualizePathStyle: {stroke: '#ffaa00'}});
+            }
+        }
+        else {
+            var targets = creep.room.find(FIND_STRUCTURES, {
+                    filter: (structure) => {
+                        return (structure.structureType == STRUCTURE_EXTENSION || structure.structureType == STRUCTURE_SPAWN) &&
+                            structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0;
+                    }
+            });
+            if(targets.length > 0) {
+                if(creep.transfer(targets[0], RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
+                    creep.moveTo(targets[0], {visualizePathStyle: {stroke: '#ffffff'}});
+                }
+            }
+        }
+	}
+};
+
+module.exports = roleHarvester;
+```
+
+Para conocer la cantidad total de energía en la habitación, puedes usar la propiedad ```Room.energyAvailable.``` Agreguemos la salida de esta propiedad a la consola para rastrearla durante el llenado de extensiones.
+
+Rellene todas las 5 extensiones y el spawn con energía.
+
+- Documentación:
+  - [Room.energyAvailable](https://docs.screeps.com/api/#Room.energyAvailable)
+
+Código (main)
+
+```javascript
+var roleHarvester = require('role.harvester');
+var roleBuilder = require('role.builder');
+
+module.exports.loop = function () {
+
+    for(var name in Game.rooms) {
+        console.log('Room "'+name+'" has '+Game.rooms[name].energyAvailable+' energy');
+    }
+
+    for(var name in Game.creeps) {
+        var creep = Game.creeps[name];
+        if(creep.memory.role == 'harvester') {
+            roleHarvester.run(creep);
+        }
+        if(creep.memory.role == 'builder') {
+            roleBuilder.run(creep);
+        }
+    }
+}
+```
+
+Excelente, todas las estructuras despues de un rato deberian de estar llenas de energía. ¡Es hora de construir a un creep grande!
+
+En total, tenemos 550 unidades de energía en nuestro spawn y extensiones. Es suficiente para crear un creep con el cuerpo ```[WORK,WORK,WORK, WORK,CARRY,MOVE,MOVE].``` Este creep funcionará 4 veces más rápido que un creep trabajador normal. Su cuerpo es más pesado, por eso le agregamos otro ```MOVE.``` Sin embargo, dos partes aún no son suficientes para moverlo a la velocidad de un creep pequeño, para poder avanzar rápido requeriría 4x```MOVE``` o la construcción de una carretera.
+
+Genera un creep con el cuerpo ```[WORK,WORK,WORK,CARRY,MOVE,MOVE]```, y dale el nombre de HarvesterBig y el rol de cosechador (harvester).
+
+Código
+
+```javascript
+Game.spawns['Spawn1'].spawnCreep( [WORK,WORK,WORK,WORK,CARRY,MOVE,MOVE],
+    'HarvesterBig',
+    { memory: { role: 'harvester' } } );
+```
+
+La construcción de este creep tomó energía de todos los almacenes y los drenó por completo.
+
+Ahora, seleccionemos nuestro creep y veamos cómo funciona.
+
+Has clic en el creep ```Harvester2.```
+
+Como puedes ver en el panel derecho, este poderoso creep cosecha 8 unidades de energía por tick. Algunos de los creep pueden drenar por completo una fuente de energía antes de que se vuelva a llenar, lo que le da a tu colonia un impulso de energía máximo.
+
+Por lo tanto, al actualizar a tu controlador, podras construir nuevas extensiones y creeps más potentes, mejorarás considerablemente la efectividad del trabajo de tu colonia. Además, al reemplazar muchos creeps pequeños con menos grandes, ahorras recursos de CPU para controlarlos, lo cual es un requisito previo importante para jugar en el modo en línea.
+
+En la siguiente sección, hablaremos sobre cómo configurar la fabricación automática de nuevos creeps.
