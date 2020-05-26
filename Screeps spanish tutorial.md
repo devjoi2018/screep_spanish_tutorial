@@ -535,3 +535,359 @@ Como puedes ver en el panel derecho, este poderoso creep cosecha 8 unidades de e
 Por lo tanto, al actualizar a tu controlador, podras construir nuevas extensiones y creeps más potentes, mejorarás considerablemente la efectividad del trabajo de tu colonia. Además, al reemplazar muchos creeps pequeños con menos grandes, ahorras recursos de CPU para controlarlos, lo cual es un requisito previo importante para jugar en el modo en línea.
 
 En la siguiente sección, hablaremos sobre cómo configurar la fabricación automática de nuevos creeps.
+
+
+# 4. Auto creación de creeps
+
+Hasta ahora, hemos creado nuevos creeps directamente en la consola. No es una buena idea hacerlo constantemente ya que la idea misma de Screeps es hacer que tu colonia se controle a sí misma. Te irá bien si le enseñas a tu spawn a producir creeps en la habitación por sí solo.
+
+Este es un tema bastante complicado y muchos jugadores pasan meses perfeccionando y refinando su código de generación automática. Pero intentemos al menos algo simple y dominemos algunos principios básicos para comenzar.
+
+Tendrás que crear nuevos creeps cuando los viejos mueran por la edad o por otras razones. Dado que no hay eventos en el juego para informar la muerte de un creep particular, la forma más fácil es contar el número de creeps requeridos y, si llega a ser inferior a un valor definido, comenzará a generar creeps automaticamente.
+
+Hay varias formas de contar la cantidad de creeps. Uno de ellos es filtrar ```Game.creeps``` con la ayuda de la función ```_.filter``` y usar el rol en su memoria. Intentemos hacer eso y llevar el número de creeps a la consola.
+
+Agrega la salida de la cantidad de creeps con el rol de recolector (```harvester```) en la consola.
+
+- Documentación:
+  - [Game.creeps](https://docs.screeps.com/api/#Game.creeps)
+  - [lodash.filter](https://lodash.com/docs#filter)
+
+Código (main)
+
+```javascript
+var roleHarvester = require('role.harvester');
+var roleUpgrader = require('role.upgrader');
+
+module.exports.loop = function () {
+
+    var harvesters = _.filter(Game.creeps, (creep) => creep.memory.role == 'harvester');
+    console.log('Harvesters: ' + harvesters.length);
+
+    for(var name in Game.creeps) {
+        var creep = Game.creeps[name];
+        if(creep.memory.role == 'harvester') {
+            roleHarvester.run(creep);
+        }
+        if(creep.memory.role == 'upgrader') {
+            roleUpgrader.run(creep);
+        }
+    }
+}
+```
+
+Digamos que queremos tener siempre al menos dos creeps. La forma más fácil de lograr esto es ejecutar ```StructureSpawn.spawnCreep``` cada vez que dla cantidad de creeps en la sala sea menor a dos. Es posible que no sea necesario definir su nombre (se le dará automáticamente en este caso), pero no olvides definir la función necesaria.
+
+También podemos agregar una nueva llamada ```RoomVisual``` para visualizar qué creep se está generando.
+
+Agrega la lógica para ```StructureSpawn.spawnCreep``` en su módulo principal.
+
+- Documentación:
+  - [StructureSpawn.spawnCreep](https://docs.screeps.com/api/#StructureSpawn.spawnCreep)
+  - [RoomVisual](https://docs.screeps.com/api/#RoomVisual)
+
+Código (main)
+
+```javascript
+var roleHarvester = require('role.harvester');
+var roleUpgrader = require('role.upgrader');
+
+module.exports.loop = function () {
+
+    var harvesters = _.filter(Game.creeps, (creep) => creep.memory.role == 'harvester');
+    console.log('Harvesters: ' + harvesters.length);
+
+    if(harvesters.length < 2) {
+        var newName = 'Harvester' + Game.time;
+        console.log('Spawning new harvester: ' + newName);
+        Game.spawns['Spawn1'].spawnCreep([WORK,CARRY,MOVE], newName, 
+            {memory: {role: 'harvester'}});        
+    }
+    
+    if(Game.spawns['Spawn1'].spawning) { 
+        var spawningCreep = Game.creeps[Game.spawns['Spawn1'].spawning.name];
+        Game.spawns['Spawn1'].room.visual.text(
+            '🛠️' + spawningCreep.memory.role,
+            Game.spawns['Spawn1'].pos.x + 1, 
+            Game.spawns['Spawn1'].pos.y, 
+            {align: 'left', opacity: 0.8});
+    }
+
+    for(var name in Game.creeps) {
+        var creep = Game.creeps[name];
+        if(creep.memory.role == 'harvester') {
+            roleHarvester.run(creep);
+        }
+        if(creep.memory.role == 'upgrader') {
+            roleUpgrader.run(creep);
+        }
+    }
+}
+```
+
+Ahora tratemos de emular una situación en la que uno de nuestros creeps muere. Ahora puedes dar el comando suicidio al creep a través de la consola o tu panel de propiedades a la derecha.
+
+Haz que uno de los creeps se suicide.
+
+- Documentación:
+  - [Creep.suicide](https://docs.screeps.com/api/#Creep.suicide)
+
+Código 
+
+```javascript
+Game.creeps['Harvester1'].suicide()
+```
+
+Como puedes ver desde la consola, después de que nos faltó un creep, comenzó a construirse un nuevo creep con un nuevo nombre.
+
+Un punto importante aquí es que la memoria de los creeps muertos no se borra sino que se guarda para su posterior reutilización. Si creas creeps con nombres aleatorios cada vez, puedes provocar una saturación de la memoria, por lo que debes borrarlo al comienzo de cada tick (antes del código de creación del creep).
+
+Agrega el siguiente código para borrar la memoria.
+
+Código (main)
+
+```javascript
+var roleHarvester = require('role.harvester');
+var roleUpgrader = require('role.upgrader');
+
+module.exports.loop = function () {
+
+    for(var name in Memory.creeps) {
+        if(!Game.creeps[name]) {
+            delete Memory.creeps[name];
+            console.log('Clearing non-existing creep memory:', name);
+        }
+    }
+
+    var harvesters = _.filter(Game.creeps, (creep) => creep.memory.role == 'harvester');
+    console.log('Harvesters: ' + harvesters.length);
+
+    if(harvesters.length < 2) {
+        var newName = 'Harvester' + Game.time;
+        console.log('Spawning new harvester: ' + newName);
+        Game.spawns['Spawn1'].spawnCreep([WORK,CARRY,MOVE], newName, 
+            {memory: {role: 'harvester'}});
+    }
+    
+    if(Game.spawns['Spawn1'].spawning) { 
+        var spawningCreep = Game.creeps[Game.spawns['Spawn1'].spawning.name];
+        Game.spawns['Spawn1'].room.visual.text(
+            '🛠️' + spawningCreep.memory.role,
+            Game.spawns['Spawn1'].pos.x + 1, 
+            Game.spawns['Spawn1'].pos.y, 
+            {align: 'left', opacity: 0.8});
+    }
+
+    for(var name in Game.creeps) {
+        var creep = Game.creeps[name];
+        if(creep.memory.role == 'harvester') {
+            roleHarvester.run(creep);
+        }
+        if(creep.memory.role == 'upgrader') {
+            roleUpgrader.run(creep);
+        }
+    }
+}
+```
+
+Ahora la memoria de los creeps muertos queda relegada al olvido, lo que nos ahorra recursos.
+
+Además de crear nuevos creeps después de la muerte de los antiguos, hay otra forma de mantener la cantidad necesaria de creeps: con el método ```StructureSpawn.renewCreep.``` El envejecimiento progresivo está deshabilitado en el Tutorial, por lo que te recomendamos que te familiarices con él por tu cuenta.
+
+- Documentación:
+  - [StructureSpawn.renewCreep](https://docs.screeps.com/api/#StructureSpawn.renewCreep)
+
+
+# 5. Defendiendo tu habitación
+
+El mundo de Screeps no es el lugar más seguro. Otros jugadores pueden reclamar tu territorio. Además, tu habitación puede ser asaltada ocasionalmente por creeps de NPC neutrales. Por lo tanto, debes pensar en la defensa de tu colonia para desarrollarla con éxito.
+
+- Documentanción:
+  - [Defending your room](https://docs.screeps.com/defense.html)
+
+En la habitación hay un creep de color rojo hostil que vino de la entrada izquierda y atacó a tu colonia. Es bueno que tengamos muros para frenarlo temporalmente. Pero caerán tarde o temprano, por lo que debemos lidiar con el problema.
+
+La forma más segura de defenderte de un ataque es usar el modo seguro de la habitación. En el modo seguro, ningún otro creep podrá usar algun método dañino en la habitación (pero aún tendrás que defenderte de extraños).
+
+El modo seguro se activa a través del controlador de la sala, que debe tener activaciones disponibles para su uso. Pasemos una activación para encenderlo en nuestra habitación.
+
+Activa el modo seguro.
+
+- Documentación:
+  - [StructureController.activeSafeMode](https://docs.screeps.com/api/#StructureController.activateSafeMode)
+
+Código
+
+```javascript
+Game.spawns['Spawn1'].room.controller.activateSafeMode();
+```
+
+Como puedes ver, el creep enemigo dejó de atacar el muro: sus métodos dañinos están bloqueados. Recomendamos que actives el modo seguro cuando tus defensas fallen.
+
+Ahora limpiemos la habitación de los invitados no deseados.
+
+Las torres son la forma más fácil de defender activamente una habitación. Usan energía y pueden apuntar a cualquier creep en una habitación para atacarlo o curarlo. El efecto depende de la distancia entre la torre y el objetivo.
+
+Para empezar, vamos a sentar las bases de nuestra nueva torre. Puedes configurar cualquier lugar que desees dentro de las paredes y colocar el sitio de construcción con la ayuda del botón "Construir" en el panel superior <i class="fas fa-cube"></i>.
+
+Coloca el sitio de construcción para la torre (manualmente o usando el código a continuación).
+
+- Documentación:
+  - [StructureTower](https://docs.screeps.com/api/#StructureTower)
+  - [Room.createConstructionSite](https://docs.screeps.com/api/#Room.createConstructionSite)
+
+
+Código
+
+```javascript
+Game.spawns['Spawn1'].room.createConstructionSite( 23, 22, STRUCTURE_TOWER );
+```
+
+Como puedes ver el creep Builder1 ha comenzado inmediatamente la construcción. Espera hasta que termine.
+
+Una torre usa energía, así que modifiquemos el el rol de recolector (```harvester```) para llevar energía a la torre junto con otras estructuras. Para hacer esto, debe agregar la constante ```STRUCTURE_TOWER``` al filtro de estructuras a las que apunta su creep recolector.
+
+Agrega ```STRUCTURE_TOWER``` al módulo ```role.harvester``` y espere a que aparezca la energía en la torre.
+
+Código (role.harvester)
+
+```javascript
+var roleHarvester = {
+
+    /** @param {Creep} creep **/
+    run: function(creep) {
+	    if(creep.store.getFreeCapacity() > 0) {
+            var sources = creep.room.find(FIND_SOURCES);
+            if(creep.harvest(sources[0]) == ERR_NOT_IN_RANGE) {
+                creep.moveTo(sources[0], {visualizePathStyle: {stroke: '#ffaa00'}});
+            }
+        }
+        else {
+            var targets = creep.room.find(FIND_STRUCTURES, {
+                    filter: (structure) => {
+                        return (structure.structureType == STRUCTURE_EXTENSION ||
+                                structure.structureType == STRUCTURE_SPAWN ||
+                                structure.structureType == STRUCTURE_TOWER) && 
+                                structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0;
+                    }
+            });
+            if(targets.length > 0) {
+                if(creep.transfer(targets[0], RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
+                    creep.moveTo(targets[0], {visualizePathStyle: {stroke: '#ffffff'}});
+                }
+            }
+        }
+	}
+};
+
+module.exports = roleHarvester;
+```
+
+¡Excelente, tu torre deberia estar lista para usarse!
+
+Como un creep, una torre tiene varios métodos similares: atacar(```attack```), curar (```heal```) y reparar (```repair```). Cada acción gasta 10 unidades de energía. Necesitamos usar el ataque contra el enemigo más cercano para que se descubra. Recuerda que la distancia es vital: ¡el efecto puede ser más fuerte algunas veces con el mismo costo de energía!
+
+Para obtener el objeto de la torre directamente, puedes usar su ID desde el panel derecho y el método ```Game.getObjectById.```
+
+Destruye al creep enemigo con la ayuda de la torre.
+
+- Documentación:
+  - [Game.getObjectById](https://docs.screeps.com/api/#Game.getObjectById)
+  - [RoomObject.pos](https://docs.screeps.com/api/#RoomObject.pos)
+  - [RoomPosition.findClosestByRange](https://docs.screeps.com/api/#RoomPosition.findClosestByRange)
+  - [StructureTower.attack](https://docs.screeps.com/api/#StructureTower.attack)
+
+Código (main)
+
+```javascript
+var roleHarvester = require('role.harvester');
+var roleUpgrader = require('role.upgrader');
+var roleBuilder = require('role.builder');
+
+module.exports.loop = function () {
+
+    var tower = Game.getObjectById('321a7961043f40fdb57c9348');
+    if(tower) {
+        var closestHostile = tower.pos.findClosestByRange(FIND_HOSTILE_CREEPS);
+        if(closestHostile) {
+            tower.attack(closestHostile);
+        }
+    }
+
+    for(var name in Game.creeps) {
+        var creep = Game.creeps[name];
+        if(creep.memory.role == 'harvester') {
+            roleHarvester.run(creep);
+        }
+        if(creep.memory.role == 'upgrader') {
+            roleUpgrader.run(creep);
+        }
+        if(creep.memory.role == 'builder') {
+            roleBuilder.run(creep);
+        }
+    }
+}
+```
+
+Como puedes ver el creep enemigo fué eliminado y nuestra colonia puede respirar fácilmente. Sin embargo, el invasor ha dañado algunas paredes durante el breve ataque. Será mejor que configure la reparación automática.
+
+Las estructuras dañadas pueden ser reparadas tanto por creeps como por torres. Intentemos usar una torre para eso. Necesitaremos el método de reparación (```repair```). También necesitarás el método ```Room.find``` y un filtro para ubicar las paredes dañadas.
+
+Ten en cuenta que, dado que los muros no pertenecen a ningún jugador, encontrarlos requiere la constante ```FIND_STRUCTURES``` en lugar de ```FIND_MY_STRUCTURES.```
+
+Repara todas las paredes dañadas.
+
+- Documentación:
+  - [Room.find](https://docs.screeps.com/api/#Room.find)
+  - [StructureTower.repair](https://docs.screeps.com/api/#StructureTower.repair)
+
+Código (main)
+
+```javascript
+var roleHarvester = require('role.harvester');
+var roleUpgrader = require('role.upgrader');
+var roleBuilder = require('role.builder');
+
+module.exports.loop = function () {
+
+    var tower = Game.getObjectById('321a7961043f40fdb57c9348');
+    if(tower) {
+        var closestDamagedStructure = tower.pos.findClosestByRange(FIND_STRUCTURES, {
+            filter: (structure) => structure.hits < structure.hitsMax
+        });
+        if(closestDamagedStructure) {
+            tower.repair(closestDamagedStructure);
+        }
+
+        var closestHostile = tower.pos.findClosestByRange(FIND_HOSTILE_CREEPS);
+        if(closestHostile) {
+            tower.attack(closestHostile);
+        }
+    }
+
+    for(var name in Game.creeps) {
+        var creep = Game.creeps[name];
+        if(creep.memory.role == 'harvester') {
+            roleHarvester.run(creep);
+        }
+        if(creep.memory.role == 'upgrader') {
+            roleUpgrader.run(creep);
+        }
+        if(creep.memory.role == 'builder') {
+            roleBuilder.run(creep);
+        }
+    }
+}
+```
+
+¡Todo el daño del ataque ha sido reparado!
+
+¡Felicitaciones, has completado el Tutorial! Ahora tienes suficiente conocimiento y código para comenzar a jugar en el modo en línea. ¡Elige tu habitación, encuentra una colonia y emprende tu propia búsqueda de dominación en el mundo de Screeps!
+
+Si desea profundizar en las sutilezas del juego o tienes alguna pregunta, no dudes en consultar:
+
+- [Documentation](https://docs.screeps.com/)
+- [Forum](https://screeps.com/forum/)
+- [Slack chat](https://chat.screeps.com/)
+
+Feliz codificación.
